@@ -1,0 +1,48 @@
+services:
+  # --- The Bodyguard (Tailscale) ---
+  tailscale:
+    image: tailscale/tailscale:latest
+    container_name: storyteller-tailscale
+    hostname: storyteller
+    environment:
+      - TS_AUTHKEY=${TAILSCALE_AUTH_KEY}
+      - TS_STATE_DIR=/var/lib/tailscale
+      - TS_SERVE_CONFIG=/config/ts-serve.json
+      - TS_CERT_DOMAIN=${TS_CERT_DOMAIN}
+    volumes:
+      - tailscale_data:/var/lib/tailscale
+      - ./ts-serve.json:/config/ts-serve.json:ro
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    restart: unless-stopped
+
+  # --- The App (Storyteller) ---
+  web:
+    image: registry.gitlab.com/storyteller-platform/storyteller:latest
+    container_name: storyteller
+    # Sharing the tailscale sidecar's netns: no published host ports, so the
+    # app is reachable ONLY over the tailnet (via `tailscale serve`), never
+    # exposed on the LAN or the public internet. No funnel.
+    network_mode: service:tailscale
+    restart: unless-stopped
+    environment:
+      - STORYTELLER_SECRET_KEY_FILE=/run/secrets/secret_key
+      - TZ=${TZ:-America/New_York}
+    volumes:
+      # Persistent data: database, covers, transcriptions, uploaded books
+      - storyteller_data:/data
+      # Optional: mount a local books folder for auto-import (read-only)
+      # - ~/Documents/Books:/library:rs
+    secrets:
+      - secret_key
+    depends_on:
+      - tailscale
+
+volumes:
+  tailscale_data:
+  storyteller_data:
+
+secrets:
+  secret_key:
+    file: ./STORYTELLER_SECRET_KEY.txt

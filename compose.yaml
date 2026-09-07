@@ -32,8 +32,11 @@ services:
     volumes:
       # Persistent data: database, covers, transcriptions, uploaded books
       - storyteller_data:/data
-      # Optional: mount a local books folder for auto-import (read-only)
-      # - ~/Documents/Books:/library:rs
+      # Auto-import: shared drop-in library volume. Storyteller ingests/moves
+      # source files, so it's mounted rw. Other containers can mount this same
+      # volume (rw) to drop books in, e.g.
+      #   docker run --rm -v storyteller_library:/drop:rw your-image sh -c 'cp /from/* /drop/'
+      - storyteller_library:/library:rw
     secrets:
       - secret_key
     depends_on:
@@ -42,6 +45,8 @@ services:
 volumes:
   tailscale_data:
   storyteller_data:
+  # Shared auto-import library: writable from Storyteller and any other container
+  storyteller_library:
 
 secrets:
   secret_key:

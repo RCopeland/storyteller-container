@@ -45,8 +45,12 @@ services:
 volumes:
   tailscale_data:
   storyteller_data:
-  # Shared auto-import library: writable from Storyteller and any other container
+  # Shared auto-import library: created once (docker volume create ...) and seeded,
+  # then wired to the running stack. Declared external so `docker compose down -v`
+  # never deletes the library. Project-prefixed name as created on the homelab.
   storyteller_library:
+    external: true
+    name: storyteller-container_storyteller_library
 
 secrets:
   secret_key:

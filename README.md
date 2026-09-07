@@ -64,15 +64,27 @@ Storyteller is configured through the settings UI and/or a JSON config file
 | `READIUM_PORT` | Port for the Readium server | `8002` |
 | `TZ` | Timezone | `America/New_York` |
 
-### Books library (optional)
+### Books library (auto-import)
 
 By default data (database, covers, transcriptions, uploaded books) persists in
-the named `storyteller_data` volume at `/data`. To auto-import from an existing
-books folder, uncomment this in `compose.yaml`:
+the named volume `storyteller_data` at `/data`. To auto-import books, Storyteller
+watches the `storyteller_library` volume mounted at `/library`. It's created and
+seeded once on the homelab, then declared `external` in compose so it can't be
+accidentally removed by `docker compose down -v`.
 
-```yaml
-- ~/Documents/Books:/library:rs
+**Dropping books in from other containers** — mount the same volume (rw) in the
+source container and copy files into it:
+
+```bash
+docker run --rm \
+  -v storyteller-container_storyteller_library:/library:rw \
+  -v /path/from/your/container:/src:ro \
+  alpine sh -c 'cp -r /src/. /library/ && chown -R 1000:1000 /library'
 ```
+
+The volume must stay owned by UID/GID `1000` so the Storyteller process can
+read/ingest/move files. On a normal sync, books dropped into `/library` are
+ingested automatically (Storyteller scans on start and on a daily cron).
 
 ## Security notes
 

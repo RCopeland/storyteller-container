@@ -5,6 +5,14 @@ on:
     branches: [master]
   pull_request:
 
+# Least-privilege, but explicit: the `secrets` job needs to read pull-request
+# metadata for PR scans (gitleaks-action calls the PR API). The repo default is
+# read-only, which alone yields "Resource not accessible by integration" on a
+# private repo, so `pull-requests: read` must be granted here.
+permissions:
+  contents: read
+  pull-requests: read
+
 # Note for future maintainers: this workflow is intentionally read-only.
 # Do NOT add `docker compose up` / build / deploy steps here. The
 # `storyteller_library` volume is declared `external: true` in compose.yaml and

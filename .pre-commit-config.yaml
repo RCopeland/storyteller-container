@@ -1,0 +1,35 @@
+# Secret + hygiene checks that run on every commit, before anything reaches GitHub.
+#
+# One-time setup (per clone):
+#   pip install pre-commit   # or: pipx install pre-commit
+#   pre-commit install
+#
+# Run against the whole tree at any time:
+#   pre-commit run --all-files
+#
+# `git commit --no-verify` skips these hooks. CI (.github/workflows/ci.yml) is
+# the backstop for that — the `secrets` job scans full history on every push/PR.
+repos:
+  # Catches Tailscale auth keys, cloud credentials, private keys, tokens, etc.
+  # `--config=gitleaks.toml` adds a Tailscale `tskey-...` rule on top of the
+  # built-in ruleset (gitleaks has no Tailscale rule by default).
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.30.1
+    hooks:
+      - id: gitleaks
+        args: [--config=gitleaks.toml]
+
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      # Blocks committed private keys (PEM/OpenSSH blocks).
+      - id: detect-private-key
+      # Blocks accidentally-added large/binary blobs (e.g. dropped book files).
+      - id: check-added-large-files
+        args: [--maxkb=1024]
+      # Config sanity for the files this repo is actually made of.
+      - id: check-yaml
+      - id: check-json
+      # Trailing-whitespace / missing-final-newline churn.
+      - id: end-of-file-fixer
+      - id: trailing-whitespace

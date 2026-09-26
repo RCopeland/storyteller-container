@@ -1,0 +1,34 @@
+# Gitleaks config for this repo.
+#
+# Runs via the `gitleaks` pre-commit hook (.pre-commit-config.yaml) and the
+# `secrets` CI job (.github/workflows/ci.yml). When a `gitleaks.toml` exists in
+# the repo root it EXTENDS the built-in ruleset, so all stock rules (AWS keys,
+# GitHub PATs, private keys, generic API keys, ...) still apply — the rules
+# below are additive.
+#
+# Why this file exists: gitleaks ships no rule for Tailscale auth keys, and a
+# Tailscale auth key is the single most sensitive credential this stack handles
+# (it can join a node to the tailnet). Without the rule below, a leaked
+# `tskey-auth-...` would pass both the hook and CI undetected.
+title = "storyteller-container"
+
+[extend]
+# Extend the default gitleaks ruleset rather than replacing it.
+useDefault = true
+
+[[rules]]
+id = "tailscale-auth-key"
+description = "Tailscale auth key"
+# Matches tskey-auth-<id> and tskey-api-<id>. Real keys are long; 8+ chars
+# avoids matching placeholders such as `tskey-auth-xxxxxxxxxxxx` in .env.example.
+regex = '''\b(tskey-(?:auth|api)-[A-Za-z0-9]{8,})\b'''
+secretGroup = 1
+tags = ["key", "tailscale"]
+
+  [rules.allowlist]
+  description = "Placeholder values in docs/examples, not real keys."
+  regexes = [
+    '''tskey-(?:auth|api)-x{6,}''',
+    '''tskey-(?:auth|api)-0{6,}''',
+    '''tskey-(?:auth|api)-<[^>]*>''',
+  ]

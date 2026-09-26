@@ -1,0 +1,67 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+# Note for future maintainers: this workflow is intentionally read-only.
+# Do NOT add `docker compose up` / build / deploy steps here. The
+# `storyteller_library` volume is declared `external: true` in compose.yaml and
+# only exists on the homelab, so any `up` would fail in CI. Validation only.
+
+jobs:
+  # Backstop for `git commit --no-verify`: scans full history for secrets.
+  secrets:
+    name: secrets
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout (full history)
+        uses: actions/checkout@v4
+        with:
+          # Required: a shallow clone would miss secrets in earlier commits.
+          fetch-depth: 0
+
+      - name: Run gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          # Repo-root gitleaks.toml extends the default ruleset with a
+          # Tailscale `tskey-...` rule.
+          GITLEAKS_CONFIG: gitleaks.toml
+
+  # Validates the declarative config this repo is made of.
+  validate:
+    name: validate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate compose.yaml
+        env:
+          # Synthetic values so ${...} interpolation resolves. Never real secrets.
+          TAILSCALE_AUTH_KEY: tskey-auth-0000000000000000
+          TS_CERT_DOMAIN: storyteller.example.ts.net
+          TZ: America/New_York
+        run: docker compose config --quiet
+
+      - name: Validate ts-serve.json
+        run: >-
+          python3 -c "import json; json.load(open('ts-serve.json')); print('ts-serve.json OK')"
+
+      - name: Check .env.example covers every compose variable
+        run: |
+          set -euo pipefail
+          # Every ${VAR} referenced in compose.yaml must be documented in .env.example.
+          referenced=$(grep -oE '\$\{[A-Z_][A-Z0-9_]*' compose.yaml | sed 's/\${//' | sort -u)
+          missing=""
+          for var in $referenced; do
+            if ! grep -qE "^${var}=" .env.example; then
+              missing="${missing} ${var}"
+            fi
+          done
+          if [ -n "$missing" ]; then
+            echo "::error::compose.yaml references variables missing from .env.example:${missing}"
+            exit 1
+          fi
+          echo "All ${referenced} present in .env.example"

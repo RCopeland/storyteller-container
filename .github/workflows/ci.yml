@@ -25,6 +25,10 @@ jobs:
       - name: Run gitleaks
         uses: gitleaks/gitleaks-action@v2
         env:
+          # gitleaks-action v2 requires GITHUB_TOKEN to scan pull requests
+          # (breaking change in the action). The automatic token is enough;
+          # no custom repo secret is needed, so forks still work.
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # Repo-root gitleaks.toml extends the default ruleset with a
           # Tailscale `tskey-...` rule.
           GITLEAKS_CONFIG: gitleaks.toml

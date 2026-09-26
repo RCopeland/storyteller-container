@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [master]
+    branches: [main]
   pull_request:
 
 # Least-privilege, but explicit: the `secrets` job needs to read pull-request

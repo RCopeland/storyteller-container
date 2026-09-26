@@ -140,11 +140,11 @@ only exists on the homelab, so an `up` in CI would fail.
 ### Making the checks required for PRs
 
 After the workflow has run at least once, require both jobs in
-**Settings → Branches** (or **Rulesets**) for `master`: enable *Require status
+**Settings → Branches** (or **Rulesets**) for `main`: enable *Require status
 checks to pass before merging* and select `secrets` and `validate`.
 
 Two caveats: required checks only gate **pull requests** — pushing directly to
-`master` bypasses them, so add a rule blocking direct pushes if you want them
+`main` bypasses them, so add a rule blocking direct pushes if you want them
 enforced on your own work too. And GitHub only offers a check in the picker
 once it has run at least once.
 
